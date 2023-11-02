@@ -1,0 +1,24 @@
+server:
+  shutdown: graceful
+
+spring:
+  application:
+    name: kakao-insure-homework-application
+  datasource:
+    url: jdbc:h2:mem:localdb;DB_CLOSE_ON_EXIT=FALSE
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+    defer-datasource-initialization: true
+  h2:
+    console:
+      enabled: true
