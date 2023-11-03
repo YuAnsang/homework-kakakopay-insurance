@@ -30,6 +30,10 @@ public class ContractService {
       throw new InvalidRequestException("DurationInMonths must be less than product's maxDurationInMonths");
     }
 
+    if (request.durationInMonths() < product.getMinDurationInMonths()) {
+      throw new InvalidRequestException("DurationInMonths must be greater than product's minDurationInMonths");
+    }
+
     // map entity & save
     List<Coverage> coverages = this.insuranceDao.findCoveragesByIdIn(request.coverageIds());
     Contract contract = ContractMapper.postToEntity(request);

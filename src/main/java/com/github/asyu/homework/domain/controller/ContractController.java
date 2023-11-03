@@ -21,7 +21,6 @@ public class ContractController {
   @ResponseStatus(code = HttpStatus.CREATED)
   @PostMapping("")
   public ContractDto.Detail save(@RequestBody @Valid ContractDto.Post request) {
-
     return this.service.save(request);
   }
 

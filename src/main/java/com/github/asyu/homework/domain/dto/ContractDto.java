@@ -4,6 +4,7 @@ import com.github.asyu.homework.domain.enums.ContractStatus;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -12,7 +13,7 @@ public record ContractDto() {
 
   public record Post(
       @FutureOrPresent(message = "Contract startDate must be equals or after today.") LocalDate startDate,
-      @NotNull Integer durationInMonths,
+      @NotNull @Positive Integer durationInMonths,
       @NotNull Long productId,
       @NotEmpty List<Long> coverageIds
   ) {
