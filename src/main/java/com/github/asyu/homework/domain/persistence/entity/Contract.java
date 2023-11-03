@@ -1,7 +1,9 @@
 package com.github.asyu.homework.domain.persistence.entity;
 
 import com.github.asyu.homework.common.entity.BaseEntity;
+import com.github.asyu.homework.domain.dto.ContractDto;
 import com.github.asyu.homework.domain.enums.ContractStatus;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -49,7 +51,7 @@ public class Contract extends BaseEntity {
   @JoinColumn(name = "product_id")
   private Product product;
 
-  @OneToMany(mappedBy = "contract")
+  @OneToMany(mappedBy = "contract", orphanRemoval=true, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE})
   private List<ContractCoverage> contractCoverages = new ArrayList<>();
 
   public Contract(LocalDate startDate, LocalDate endDate, Integer durationInMonths, ContractStatus status) {
@@ -72,6 +74,14 @@ public class Contract extends BaseEntity {
     double sum = coverages.stream().mapToDouble(Coverage::getPremium).sum();
     BigDecimal totalPremium = new BigDecimal(this.durationInMonths * sum);
     this.totalPremium = totalPremium.setScale(2, RoundingMode.HALF_UP);
+  }
+
+  public void patch(ContractDto.Patch request, List<Coverage> coverages) {
+    this.durationInMonths = request.durationInMonths();
+    this.endDate = this.startDate.plusMonths(request.durationInMonths());
+    this.status = request.status();
+    this.contractCoverages.clear();
+    this.addCoverages(coverages);
   }
 
 }

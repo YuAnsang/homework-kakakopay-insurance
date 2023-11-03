@@ -1,8 +1,9 @@
 package com.github.asyu.homework.domain.controller;
 
 import static com.github.asyu.homework.common.SpringProfiles.TEST;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -73,7 +74,7 @@ class ContractControllerTest {
         .andExpect(jsonPath("$.product.id").value(request.productId()))
         .andExpect(jsonPath("$.coverages[0].id").value(request.coverageIds().get(0)))
         .andExpect(jsonPath("$.coverages[1].id").value(request.coverageIds().get(1)))
-        ;
+    ;
   }
 
   @Sql("/sql/dummy.sql")
@@ -163,4 +164,88 @@ class ContractControllerTest {
     ;
   }
 
+  @DisplayName("계약 정보를 변경 한다. -> 성공")
+  @Test
+  void patch_success() throws Exception {
+    // Given
+    Long contractId = 10000L;
+    LocalDate startDate = LocalDate.of(2023, 11, 3);
+    ContractStatus expectedUpdateStatus = ContractStatus.EXPIRED;
+    ContractDto.Patch request = new ContractDto.Patch(
+        3,
+        List.of(2L),
+        expectedUpdateStatus
+    );
+
+    // When & Then
+    mockMvc.perform(patch("/apis/v1/contracts/{id}", contractId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request))
+        )
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").exists())
+        .andExpect(jsonPath("$.startDate").value(startDate.toString()))
+        .andExpect(jsonPath("$.endDate").value(startDate.plusMonths(request.durationInMonths()).toString()))
+        .andExpect(jsonPath("$.durationInMonths").value(request.durationInMonths()))
+        .andExpect(jsonPath("$.totalPremium").exists())
+        .andExpect(jsonPath("$.status").value(expectedUpdateStatus.name()))
+        .andExpect(jsonPath("$.product.id").value(1L))
+        .andExpect(jsonPath("$.coverages.size()").value(1))
+        .andExpect(jsonPath("$.coverages[0].id").value(request.coverageIds().get(0)))
+    ;
+  }
+
+  @Sql("/sql/dummy.sql")
+  @DisplayName("계약 정보를 변경 한다. -> 실패 (잘못된 parameter)")
+  @MethodSource
+  @ParameterizedTest(name = "Cause : {0}")
+  void patch_failure_case_invalid_parameter(String ignoredCause, ContractDto.Patch request) throws Exception {
+    // Given
+    Long contractId = 10000L;
+
+    // When & Then
+    mockMvc.perform(patch("/apis/v1/contracts/{id}", contractId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request))
+        )
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_PARAMETER.getCode()))
+    ;
+  }
+
+  private static Stream<Arguments> patch_failure_case_invalid_parameter() {
+    return Stream.of(
+        Arguments.of("Null durationInMonths", new ContractDto.Patch(null, List.of(1L, 2L), ContractStatus.NORMAL)),
+        Arguments.of("Negative Duration", new ContractDto.Patch(-1, List.of(1L, 2L), ContractStatus.NORMAL)),
+        Arguments.of("Zero Duration", new ContractDto.Patch(0, List.of(1L, 2L), ContractStatus.NORMAL)),
+        Arguments.of("Null coverageIds", new ContractDto.Patch(1, null, ContractStatus.NORMAL)),
+        Arguments.of("Empty coverageIds", new ContractDto.Patch(1, Collections.emptyList(), ContractStatus.NORMAL)),
+        Arguments.of("Null status", new ContractDto.Patch(1, List.of(1L, 2L), null))
+    );
+  }
+
+  @DisplayName("계약 정보를 변경 한다. -> 실패 (잘못된 parameter -> 비즈니스 로직에서 Validation)")
+  @MethodSource
+  @ParameterizedTest(name = "Cause : {0}")
+  void patch_failure_case_invalid_parameter_in_service(String ignoredCause, Long contractId, ContractDto.Patch request, ErrorCode expected) throws Exception {
+    // Given
+
+    // When & Then
+    mockMvc.perform(patch("/apis/v1/contracts/{id}", contractId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request))
+        )
+        .andExpect(status().is4xxClientError())
+        .andExpect(jsonPath("$.code").value(expected.getCode()))
+    ;
+  }
+
+  private static Stream<Arguments> patch_failure_case_invalid_parameter_in_service() {
+    return Stream.of(
+        Arguments.of("Expired Contract cannot be modifed.", 10001L, new ContractDto.Patch(3, List.of(2L), ContractStatus.NORMAL), ErrorCode.INVALID_PARAMETER_BUSINESS),
+        Arguments.of("Duration out of range", 10000L, new ContractDto.Patch(12, List.of(2L), ContractStatus.NORMAL), ErrorCode.INVALID_PARAMETER_BUSINESS),
+        Arguments.of("Invalid Coverage Ids", 10000L, new ContractDto.Patch(3, List.of(99L, 100L), ContractStatus.NORMAL), ErrorCode.INVALID_PARAMETER_BUSINESS),
+        Arguments.of("Not Exists Product", 10002L, new ContractDto.Patch(3, List.of(1L), ContractStatus.NORMAL), ErrorCode.NOT_FOUND)
+    );
+  }
 }

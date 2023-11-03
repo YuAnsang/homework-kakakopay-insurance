@@ -19,15 +19,16 @@ public class ContractCoverage {
   private Long id;
 
   @ManyToOne
-  @JoinColumn(name = "contract_id")
+  @JoinColumn(name = "contract_id", nullable = false)
   private Contract contract;
 
   @ManyToOne
-  @JoinColumn(name = "coverage_id")
+  @JoinColumn(name = "coverage_id", nullable = false)
   private Coverage coverage;
 
   public ContractCoverage(Contract contract, Coverage coverage) {
     this.contract = contract;
     this.coverage = coverage;
   }
+
 }

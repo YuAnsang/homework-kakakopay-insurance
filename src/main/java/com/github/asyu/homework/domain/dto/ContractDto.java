@@ -33,4 +33,11 @@ public record ContractDto() {
 
   }
 
+  public record Patch(
+      @NotNull @Positive Integer durationInMonths,
+      @NotEmpty List<Long> coverageIds,
+      @NotNull ContractStatus status
+  ) {
+
+  }
 }

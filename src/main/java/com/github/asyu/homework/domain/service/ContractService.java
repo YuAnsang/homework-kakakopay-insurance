@@ -2,7 +2,7 @@ package com.github.asyu.homework.domain.service;
 
 import com.github.asyu.homework.common.exception.InvalidRequestException;
 import com.github.asyu.homework.domain.dto.ContractDto;
-import com.github.asyu.homework.domain.dto.ContractDto.Detail;
+import com.github.asyu.homework.domain.enums.ContractStatus;
 import com.github.asyu.homework.domain.mapper.ContractMapper;
 import com.github.asyu.homework.domain.persistence.dao.InsuranceDao;
 import com.github.asyu.homework.domain.persistence.entity.Contract;
@@ -46,12 +46,39 @@ public class ContractService {
   }
 
   @Transactional(readOnly = true)
-  public Detail getContract(Long id) {
+  public ContractDto.Detail getContract(Long id) {
     Contract contract = insuranceDao.findContractById(id);
     List<Long> coverageIds = contract.getContractCoverages().stream()
         .map(contractCoverage -> contractCoverage.getCoverage().getId())
         .toList();
     List<Coverage> coverages = this.insuranceDao.findCoveragesByIdIn(coverageIds);
+    return ContractMapper.entityToDetail(contract, coverages);
+  }
+
+  @Transactional
+  public ContractDto.Detail patch(Long id, ContractDto.Patch request) {
+    Contract contract = insuranceDao.findContractById(id);
+    if (contract.getStatus() == ContractStatus.EXPIRED) {
+      throw new InvalidRequestException("Expired contract cannot be modified.");
+    }
+
+    // TODO 향후 별도로 분리 (save쪽이랑)
+    Product product = contract.getProduct();
+    if (!product.contains(request.coverageIds())) {
+      throw new InvalidRequestException("Coverage must be in the product");
+    }
+
+    if (request.durationInMonths() > product.getMaxDurationInMonths()) {
+      throw new InvalidRequestException("DurationInMonths must be less than product's maxDurationInMonths");
+    }
+
+    if (request.durationInMonths() < product.getMinDurationInMonths()) {
+      throw new InvalidRequestException("DurationInMonths must be greater than product's minDurationInMonths");
+    }
+
+    List<Coverage> coverages = this.insuranceDao.findCoveragesByIdIn(request.coverageIds());
+    contract.patch(request, coverages);
+
     return ContractMapper.entityToDetail(contract, coverages);
   }
 
