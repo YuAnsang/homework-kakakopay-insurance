@@ -3,7 +3,10 @@ package com.github.asyu.homework.domain.mapper;
 import com.github.asyu.homework.domain.dto.ContractDto;
 import com.github.asyu.homework.domain.enums.ContractStatus;
 import com.github.asyu.homework.domain.persistence.entity.Contract;
+import com.github.asyu.homework.domain.persistence.entity.Coverage;
+import com.github.asyu.homework.domain.persistence.entity.Product;
 import java.time.LocalDate;
+import java.util.List;
 
 public class ContractMapper {
 
@@ -18,14 +21,17 @@ public class ContractMapper {
     );
   }
 
-  public static ContractDto.Detail entityToDetail(Contract contract) {
+  public static ContractDto.Detail entityToDetail(Contract contract, List<Coverage> coverages) {
+    Product product = contract.getProduct();
     return new ContractDto.Detail(
         contract.getId(),
         contract.getStartDate(),
         contract.getEndDate(),
         contract.getDurationInMonths(),
         contract.getTotalPremium(),
-        contract.getStatus()
+        contract.getStatus(),
+        ProductMapper.entityToDetail(product),
+        coverages.stream().map(CoverageMapper::entityToDetail).toList()
     );
   }
 

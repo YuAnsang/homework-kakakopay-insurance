@@ -2,6 +2,7 @@ package com.github.asyu.homework.domain.service;
 
 import com.github.asyu.homework.common.exception.InvalidRequestException;
 import com.github.asyu.homework.domain.dto.ContractDto;
+import com.github.asyu.homework.domain.dto.ContractDto.Detail;
 import com.github.asyu.homework.domain.mapper.ContractMapper;
 import com.github.asyu.homework.domain.persistence.dao.InsuranceDao;
 import com.github.asyu.homework.domain.persistence.entity.Contract;
@@ -41,7 +42,17 @@ public class ContractService {
     contract.addCoverages(coverages);
     Contract saved = this.insuranceDao.saveContract(contract);
 
-    return ContractMapper.entityToDetail(saved);
+    return ContractMapper.entityToDetail(saved, coverages);
+  }
+
+  @Transactional(readOnly = true)
+  public Detail getContract(Long id) {
+    Contract contract = insuranceDao.findContractById(id);
+    List<Long> coverageIds = contract.getContractCoverages().stream()
+        .map(contractCoverage -> contractCoverage.getCoverage().getId())
+        .toList();
+    List<Coverage> coverages = this.insuranceDao.findCoveragesByIdIn(coverageIds);
+    return ContractMapper.entityToDetail(contract, coverages);
   }
 
 }

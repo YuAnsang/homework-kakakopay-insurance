@@ -41,4 +41,9 @@ public class InsuranceDao {
     return this.coverageRepository.findByIdIn(coverageIds);
   }
 
+  public Contract findContractById(Long contractId) {
+    return this.contractRepository.findById(contractId)
+        .orElseThrow(() -> new EntityNotExistsException("Not exists Contract. id : " + contractId));
+  }
+
 }

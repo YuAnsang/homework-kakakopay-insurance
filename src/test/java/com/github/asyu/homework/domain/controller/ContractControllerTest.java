@@ -2,6 +2,7 @@ package com.github.asyu.homework.domain.controller;
 
 import static com.github.asyu.homework.common.SpringProfiles.TEST;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -69,6 +70,9 @@ class ContractControllerTest {
         .andExpect(jsonPath("$.durationInMonths").value(request.durationInMonths()))
         .andExpect(jsonPath("$.totalPremium").exists())
         .andExpect(jsonPath("$.status").value(ContractStatus.NORMAL.name()))
+        .andExpect(jsonPath("$.product.id").value(request.productId()))
+        .andExpect(jsonPath("$.coverages[0].id").value(request.coverageIds().get(0)))
+        .andExpect(jsonPath("$.coverages[1].id").value(request.coverageIds().get(1)))
         ;
   }
 
@@ -123,4 +127,40 @@ class ContractControllerTest {
         Arguments.of("Not Exists Product", new Post(LocalDate.now(), 3, 3L, List.of(5L)), ErrorCode.NOT_FOUND)
     );
   }
+
+  @DisplayName("계약을 단건 조회한다 -> 성공")
+  @Test
+  void get_contract_success() throws Exception {
+    // Given
+    Long id = 10_000L;
+
+    // When & Then
+    mockMvc.perform(get("/apis/v1/contracts/{id}", id))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(id))
+        .andExpect(jsonPath("$.startDate").value("2023-11-03"))
+        .andExpect(jsonPath("$.endDate").value("2023-12-03"))
+        .andExpect(jsonPath("$.durationInMonths").value(1))
+        .andExpect(jsonPath("$.totalPremium").value(15000.00))
+        .andExpect(jsonPath("$.status").value(ContractStatus.NORMAL.name()))
+        .andExpect(jsonPath("$.product.id").value(1))
+        .andExpect(jsonPath("$.coverages[0].id").value(1))
+        .andExpect(jsonPath("$.coverages[1].id").value(2))
+    ;
+  }
+
+  @Sql("/sql/dummy.sql")
+  @DisplayName("계약을 단건 조회한다 -> 실패 (존재하지 않는 계약)")
+  @Test
+  void get_contract_failure_not_exists() throws Exception {
+    // Given
+    Long id = 10_001L;
+
+    // When & Then
+    mockMvc.perform(get("/apis/v1/contracts/{id}", id))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value(ErrorCode.NOT_FOUND.getCode()))
+    ;
+  }
+
 }

@@ -26,7 +26,9 @@ public record ContractDto() {
       LocalDate endDate,
       Integer durationInMonths,
       BigDecimal totalPremium,
-      ContractStatus status
+      ContractStatus status,
+      ProductDto.Detail product,
+      List<CoverageDto.Detail> coverages
   ) {
 
   }
