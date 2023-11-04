@@ -1,13 +1,15 @@
 package com.github.asyu.homework.domain.service;
 
-import com.github.asyu.homework.common.exception.InvalidRequestException;
 import com.github.asyu.homework.domain.dto.ContractDto;
-import com.github.asyu.homework.domain.enums.ContractStatus;
+import com.github.asyu.homework.domain.dto.ContractDto.TotalPremiumCriteria;
+import com.github.asyu.homework.domain.implement.ContractValidator;
 import com.github.asyu.homework.domain.mapper.ContractMapper;
 import com.github.asyu.homework.domain.persistence.dao.InsuranceDao;
 import com.github.asyu.homework.domain.persistence.entity.Contract;
 import com.github.asyu.homework.domain.persistence.entity.Coverage;
 import com.github.asyu.homework.domain.persistence.entity.Product;
+import com.github.asyu.homework.domain.utils.PremiumCalculator;
+import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,21 +21,13 @@ public class ContractService {
 
   private final InsuranceDao insuranceDao;
 
+  private final ContractValidator validator;
+
   @Transactional
   public ContractDto.Detail save(ContractDto.Post request) {
     // business validation
-    Product product = this.insuranceDao.findProductById(request.productId());
-    if (!product.contains(request.coverageIds())) {
-      throw new InvalidRequestException("Coverage must be in the product");
-    }
-
-    if (request.durationInMonths() > product.getMaxDurationInMonths()) {
-      throw new InvalidRequestException("DurationInMonths must be less than product's maxDurationInMonths");
-    }
-
-    if (request.durationInMonths() < product.getMinDurationInMonths()) {
-      throw new InvalidRequestException("DurationInMonths must be greater than product's minDurationInMonths");
-    }
+    this.validator.validate(request.productId(), request.coverageIds(), request.durationInMonths());
+    Product product = this.insuranceDao.findProductById(request.productId()); // TODO 맘에 안듦. 고민
 
     // map entity & save
     List<Coverage> coverages = this.insuranceDao.findCoveragesByIdIn(request.coverageIds());
@@ -47,7 +41,7 @@ public class ContractService {
 
   @Transactional(readOnly = true)
   public ContractDto.Detail getContract(Long id) {
-    Contract contract = insuranceDao.findContractById(id);
+    Contract contract = this.insuranceDao.findContractById(id);
     List<Long> coverageIds = contract.getContractCoverages().stream()
         .map(contractCoverage -> contractCoverage.getCoverage().getId())
         .toList();
@@ -57,29 +51,24 @@ public class ContractService {
 
   @Transactional
   public ContractDto.Detail patch(Long id, ContractDto.Patch request) {
-    Contract contract = insuranceDao.findContractById(id);
-    if (contract.getStatus() == ContractStatus.EXPIRED) {
-      throw new InvalidRequestException("Expired contract cannot be modified.");
-    }
-
-    // TODO 향후 별도로 분리 (save쪽이랑)
+    Contract contract = this.insuranceDao.findContractById(id);
     Product product = contract.getProduct();
-    if (!product.contains(request.coverageIds())) {
-      throw new InvalidRequestException("Coverage must be in the product");
-    }
-
-    if (request.durationInMonths() > product.getMaxDurationInMonths()) {
-      throw new InvalidRequestException("DurationInMonths must be less than product's maxDurationInMonths");
-    }
-
-    if (request.durationInMonths() < product.getMinDurationInMonths()) {
-      throw new InvalidRequestException("DurationInMonths must be greater than product's minDurationInMonths");
-    }
+    this.validator.validate(product.getId(), request.coverageIds(), request.durationInMonths());
 
     List<Coverage> coverages = this.insuranceDao.findCoveragesByIdIn(request.coverageIds());
     contract.patch(request, coverages);
 
     return ContractMapper.entityToDetail(contract, coverages);
+  }
+
+  @Transactional(readOnly = true)
+  public ContractDto.TotalPremiumDetail getExpectedTotalPremium(TotalPremiumCriteria criteria) {
+    this.validator.validate(criteria.productId(), criteria.coverageIds(), criteria.durationInMonths());
+
+    List<Coverage> coverages = this.insuranceDao.findCoveragesByIdIn(criteria.coverageIds());
+    BigDecimal totalPremium = PremiumCalculator.calculateTotalPremium(coverages, criteria.durationInMonths());
+
+    return new ContractDto.TotalPremiumDetail(totalPremium);
   }
 
 }

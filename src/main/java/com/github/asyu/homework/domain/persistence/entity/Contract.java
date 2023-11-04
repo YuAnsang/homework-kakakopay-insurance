@@ -1,8 +1,10 @@
 package com.github.asyu.homework.domain.persistence.entity;
 
 import com.github.asyu.homework.common.entity.BaseEntity;
+import com.github.asyu.homework.common.exception.InvalidRequestException;
 import com.github.asyu.homework.domain.dto.ContractDto;
 import com.github.asyu.homework.domain.enums.ContractStatus;
+import com.github.asyu.homework.domain.utils.PremiumCalculator;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,7 +17,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,7 +52,7 @@ public class Contract extends BaseEntity {
   @JoinColumn(name = "product_id")
   private Product product;
 
-  @OneToMany(mappedBy = "contract", orphanRemoval=true, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE})
+  @OneToMany(mappedBy = "contract", orphanRemoval = true, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE})
   private List<ContractCoverage> contractCoverages = new ArrayList<>();
 
   public Contract(LocalDate startDate, LocalDate endDate, Integer durationInMonths, ContractStatus status) {
@@ -70,13 +71,14 @@ public class Contract extends BaseEntity {
       ContractCoverage contractCoverage = new ContractCoverage(this, coverage);
       this.contractCoverages.add(contractCoverage);
     }
-
-    double sum = coverages.stream().mapToDouble(Coverage::getPremium).sum();
-    BigDecimal totalPremium = new BigDecimal(this.durationInMonths * sum);
-    this.totalPremium = totalPremium.setScale(2, RoundingMode.HALF_UP);
+    this.totalPremium = PremiumCalculator.calculateTotalPremium(coverages, this.durationInMonths);
   }
 
   public void patch(ContractDto.Patch request, List<Coverage> coverages) {
+    if (this.status == ContractStatus.EXPIRED) {
+      throw new InvalidRequestException("Expired contract cannot be modified.");
+    }
+
     this.durationInMonths = request.durationInMonths();
     this.endDate = this.startDate.plusMonths(request.durationInMonths());
     this.status = request.status();

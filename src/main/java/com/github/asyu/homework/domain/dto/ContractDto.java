@@ -40,4 +40,19 @@ public record ContractDto() {
   ) {
 
   }
+
+  public record TotalPremiumCriteria(
+      @NotNull @Positive Integer durationInMonths,
+      @NotNull Long productId,
+      @NotEmpty List<Long> coverageIds
+  ) {
+
+  }
+
+  public record TotalPremiumDetail(
+      BigDecimal totalPremium
+  ) {
+
+  }
+
 }

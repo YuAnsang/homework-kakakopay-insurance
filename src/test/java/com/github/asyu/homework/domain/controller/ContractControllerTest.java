@@ -12,6 +12,10 @@ import com.github.asyu.homework.common.enums.ErrorCode;
 import com.github.asyu.homework.domain.dto.ContractDto;
 import com.github.asyu.homework.domain.dto.ContractDto.Post;
 import com.github.asyu.homework.domain.enums.ContractStatus;
+import com.github.asyu.homework.domain.persistence.entity.Coverage;
+import com.github.asyu.homework.domain.persistence.repository.CoverageRepository;
+import com.github.asyu.homework.domain.utils.PremiumCalculator;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
@@ -48,6 +52,9 @@ class ContractControllerTest {
   @Autowired
   private ObjectMapper objectMapper;
 
+  @Autowired
+  private CoverageRepository coverageRepository;
+
   @DisplayName("새로운 계약을 생성한다 -> 성공")
   @Test
   void save_success() throws Exception {
@@ -81,7 +88,7 @@ class ContractControllerTest {
   @DisplayName("새로운 계약을 생성한다 -> 실패 (잘못된 parameter)")
   @MethodSource
   @ParameterizedTest(name = "Cause : {0}")
-  void save_failure_case_invalid_parameter(String ignoredCause, ContractDto.Post request) throws Exception {
+  void save_failure_cause_invalid_parameter(String ignoredCause, ContractDto.Post request) throws Exception {
     // Given
 
     // When & Then
@@ -94,7 +101,7 @@ class ContractControllerTest {
     ;
   }
 
-  private static Stream<Arguments> save_failure_case_invalid_parameter() {
+  private static Stream<Arguments> save_failure_cause_invalid_parameter() {
     return Stream.of(
         Arguments.of("StartDate before today", new Post(LocalDate.now().minusDays(1), 3, 1L, List.of(1L, 2L))),
         Arguments.of("Null durationInMonths", new Post(LocalDate.now(), null, 1L, List.of(1L, 2L))),
@@ -108,7 +115,7 @@ class ContractControllerTest {
   @DisplayName("새로운 계약을 생성한다 -> 실패 (잘못된 parameter -> 비즈니스 로직에서 Validation)")
   @MethodSource
   @ParameterizedTest(name = "Cause : {0}")
-  void save_failure_case_invalid_parameter_in_service(String ignoredCause, ContractDto.Post request, ErrorCode expected) throws Exception {
+  void save_failure_cause_invalid_parameter_in_service(String ignoredCause, ContractDto.Post request, ErrorCode expected) throws Exception {
     // Given
 
     // When & Then
@@ -121,7 +128,7 @@ class ContractControllerTest {
     ;
   }
 
-  private static Stream<Arguments> save_failure_case_invalid_parameter_in_service() {
+  private static Stream<Arguments> save_failure_cause_invalid_parameter_in_service() {
     return Stream.of(
         Arguments.of("Duration out of range", new Post(LocalDate.now(), 4, 1L, List.of(1L, 2L)), ErrorCode.INVALID_PARAMETER_BUSINESS),
         Arguments.of("Invalid Coverage Ids -> Not Exists In Product", new Post(LocalDate.now(), 3, 1L, List.of(3L)), ErrorCode.INVALID_PARAMETER_BUSINESS),
@@ -199,7 +206,7 @@ class ContractControllerTest {
   @DisplayName("계약 정보를 변경 한다. -> 실패 (잘못된 parameter)")
   @MethodSource
   @ParameterizedTest(name = "Cause : {0}")
-  void patch_failure_case_invalid_parameter(String ignoredCause, ContractDto.Patch request) throws Exception {
+  void patch_failure_cause_invalid_parameter(String ignoredCause, ContractDto.Patch request) throws Exception {
     // Given
     Long contractId = 10000L;
 
@@ -213,7 +220,7 @@ class ContractControllerTest {
     ;
   }
 
-  private static Stream<Arguments> patch_failure_case_invalid_parameter() {
+  private static Stream<Arguments> patch_failure_cause_invalid_parameter() {
     return Stream.of(
         Arguments.of("Null durationInMonths", new ContractDto.Patch(null, List.of(1L, 2L), ContractStatus.NORMAL)),
         Arguments.of("Negative Duration", new ContractDto.Patch(-1, List.of(1L, 2L), ContractStatus.NORMAL)),
@@ -227,7 +234,7 @@ class ContractControllerTest {
   @DisplayName("계약 정보를 변경 한다. -> 실패 (잘못된 parameter -> 비즈니스 로직에서 Validation)")
   @MethodSource
   @ParameterizedTest(name = "Cause : {0}")
-  void patch_failure_case_invalid_parameter_in_service(String ignoredCause, Long contractId, ContractDto.Patch request, ErrorCode expected) throws Exception {
+  void patch_failure_cause_invalid_parameter_in_service(String ignoredCause, Long contractId, ContractDto.Patch request, ErrorCode expected) throws Exception {
     // Given
 
     // When & Then
@@ -240,7 +247,7 @@ class ContractControllerTest {
     ;
   }
 
-  private static Stream<Arguments> patch_failure_case_invalid_parameter_in_service() {
+  private static Stream<Arguments> patch_failure_cause_invalid_parameter_in_service() {
     return Stream.of(
         Arguments.of("Expired Contract cannot be modifed.", 10001L, new ContractDto.Patch(3, List.of(2L), ContractStatus.NORMAL), ErrorCode.INVALID_PARAMETER_BUSINESS),
         Arguments.of("Duration out of range", 10000L, new ContractDto.Patch(12, List.of(2L), ContractStatus.NORMAL), ErrorCode.INVALID_PARAMETER_BUSINESS),
@@ -248,4 +255,83 @@ class ContractControllerTest {
         Arguments.of("Not Exists Product", 10002L, new ContractDto.Patch(3, List.of(1L), ContractStatus.NORMAL), ErrorCode.NOT_FOUND)
     );
   }
+
+  @DisplayName("예상 총 보험료를 조회한다. -> 성공")
+  @Test
+  void get_expected_total_premium_success() throws Exception {
+    // Given
+    List<Long> coverageIds = List.of(1L, 2L);
+    Integer contractDuration = 3;
+    ContractDto.TotalPremiumCriteria request = new ContractDto.TotalPremiumCriteria(
+        contractDuration,
+        1L,
+        coverageIds
+    );
+
+    List<Coverage> coverages = coverageRepository.findByIdIn(coverageIds);
+    BigDecimal expectedTotalPremium = PremiumCalculator.calculateTotalPremium(coverages, contractDuration);
+
+    // When & Then
+    mockMvc.perform(get("/apis/v1/contracts/expected-total-premium")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request))
+        )
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalPremium").exists())
+        .andExpect(jsonPath("$.totalPremium").value(expectedTotalPremium.doubleValue()))
+    ;
+  }
+
+  @Sql("/sql/dummy.sql")
+  @DisplayName("예상 총 보험료를 조회한다. -> 실패 (잘못된 parameter)")
+  @MethodSource
+  @ParameterizedTest(name = "Cause : {0}")
+  void get_expected_total_premium_failure_cause_invalid_parameter(String ignoredCause, ContractDto.TotalPremiumCriteria criteria) throws Exception {
+    // Given
+
+    // When & Then
+    mockMvc.perform(get("/apis/v1/contracts/expected-total-premium")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(criteria))
+        )
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_PARAMETER.getCode()))
+    ;
+  }
+
+  private static Stream<Arguments> get_expected_total_premium_failure_cause_invalid_parameter() {
+    return Stream.of(
+        Arguments.of("Null durationInMonths", new ContractDto.TotalPremiumCriteria(null, 1L, List.of(1L, 2L))),
+        Arguments.of("Negative Duration", new ContractDto.TotalPremiumCriteria(-1, 1L, List.of(1L, 2L))),
+        Arguments.of("Zero Duration", new ContractDto.TotalPremiumCriteria(0, 1L, List.of(1L, 2L))),
+        Arguments.of("Null productId", new ContractDto.TotalPremiumCriteria(3, null, List.of(1L, 2L))),
+        Arguments.of("Null coverageIds", new ContractDto.TotalPremiumCriteria(3, 1L, null)),
+        Arguments.of("Empty coverageIds", new ContractDto.TotalPremiumCriteria(3, 1L, Collections.emptyList()))
+    );
+  }
+
+  @DisplayName("예상 총 보험료를 조회한다. -> 실패 (잘못된 parameter -> 비즈니스 로직에서 Validation)")
+  @MethodSource
+  @ParameterizedTest(name = "Cause : {0}")
+  void get_expected_total_premium_failure_cause_invalid_parameter_in_service(String ignoredCause, ContractDto.TotalPremiumCriteria criteria, ErrorCode expected) throws Exception {
+    // Given
+
+    // When & Then
+    mockMvc.perform(get("/apis/v1/contracts/expected-total-premium")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(criteria))
+        )
+        .andExpect(status().is4xxClientError())
+        .andExpect(jsonPath("$.code").value(expected.getCode()))
+    ;
+  }
+
+  private static Stream<Arguments> get_expected_total_premium_failure_cause_invalid_parameter_in_service() {
+    return Stream.of(
+        Arguments.of("Duration out of range", new ContractDto.TotalPremiumCriteria(4, 1L, List.of(1L, 2L)), ErrorCode.INVALID_PARAMETER_BUSINESS),
+        Arguments.of("Invalid Coverage Ids -> Not Exists In Product", new ContractDto.TotalPremiumCriteria(3, 1L, List.of(3L)), ErrorCode.INVALID_PARAMETER_BUSINESS),
+        Arguments.of("Not Exists Product", new ContractDto.TotalPremiumCriteria(3, 99L, List.of(1L)), ErrorCode.NOT_FOUND)
+    );
+  }
+
 }

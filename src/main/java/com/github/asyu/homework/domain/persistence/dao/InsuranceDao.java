@@ -28,7 +28,7 @@ public class InsuranceDao {
 
   public Contract saveContract(Contract contract) {
     Contract saved = this.contractRepository.save(contract);
-    contractCoverageRepository.saveAll(saved.getContractCoverages());
+    this.contractCoverageRepository.saveAll(saved.getContractCoverages());
     return saved;
   }
 

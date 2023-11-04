@@ -21,7 +21,6 @@ public class ContractController {
 
   private final ContractService service;
 
-
   @PostMapping("")
   @ResponseStatus(HttpStatus.CREATED)
   public ContractDto.Detail save(@RequestBody @Valid ContractDto.Post request) {
@@ -38,6 +37,12 @@ public class ContractController {
   @ResponseStatus(HttpStatus.OK)
   public ContractDto.Detail patchContract(@PathVariable Long id, @RequestBody @Valid ContractDto.Patch request) {
     return this.service.patch(id, request);
+  }
+
+  @GetMapping("/expected-total-premium")
+  @ResponseStatus(HttpStatus.OK)
+  public ContractDto.TotalPremiumDetail getExpectedTotalPremium(@RequestBody @Valid ContractDto.TotalPremiumCriteria criteria) {
+    return this.service.getExpectedTotalPremium(criteria);
   }
 
 }
