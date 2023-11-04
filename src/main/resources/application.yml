@@ -17,8 +17,12 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        default_batch_fetch_size: 1000
     open-in-view: false
     defer-datasource-initialization: true
   h2:
     console:
       enabled: true
+  sql:
+    init:
+      mode: always

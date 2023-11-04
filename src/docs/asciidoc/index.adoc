@@ -1,0 +1,166 @@
+= 카카오페이 손해보험 과제 REST API Guide
+YuAnsang;
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:toclevels: 4
+:sectlinks:
+:operation-curl-request-title: Example request
+:operation-http-response-title: Example response
+
+[[overview]]
+= 개요
+
+카카오페이 손해보험 2번 과제에 대한 API 명세 문서입니다.
+
+[[overview-http-verbs]]
+== HTTP 동사
+
+본 REST API에서 사용하는 HTTP 동사(verbs)는 가능한한 표준 HTTP와 REST 규약을 따릅니다.
+
+|===
+| 동사 | 용례
+
+| `GET`
+| 리소스를 가져올 때 사용
+
+| `POST`
+| 새 리소스를 만들 때 사용
+
+| `PUT`
+| 기존 리소스를 수정할 때 사용 (replace)
+
+| `PATCH`
+| 기존 리소스를 일부분 수정할 때 사용
+
+| `DELETE`
+| 기존 리소스를 삭제할 떄 사용
+|===
+
+[[overview-http-status-codes]]
+== HTTP 상태 코드
+
+본 REST API에서 사용하는 HTTP 상태 코드는 가능한 표준 HTTP와 REST 규약을 따릅니다.
+
+|===
+| 상태 코드 | 용례
+
+| `200 OK`
+| 요청을 성공적으로 처리함
+
+| `201 Created`
+| 새 리소스를 성공적으로 생성함.
+
+| `400 Bad Request`
+| 잘못된 요청을 보낸 경우.
+
+| `401 Unauthorized`
+| 사용자 인증이 올바르게 작동하지 않은 경우.
+
+| `403 Forbidden`
+| 사용자가 해당 요청에 권한이 없는 경우.
+
+| `404 Not Found`
+| 요청한 리소스가 없음.
+
+| `409 Conflict`
+| 요청한 리소스가 이미 존재함.
+|===
+
+[[overview-errors]]
+== 오류
+
+에러 응답이 발생했을 때 (상태 코드 >= 400), 본문에 해당 문제를 기술한 JSON 객체가 담겨있다.
+에러 객체는 다음의 구조를 따른다.
+
+=== Error Response Example
+
+include::{snippets}/error/errors-400-1/http-response.adoc[]
+include::{snippets}/error/errors-400-2/http-response.adoc[]
+include::{snippets}/error/errors-404/http-response.adoc[]
+
+=== Error Code
+
+|===
+| 에러 코드 | 설명
+| `COMMON-001`
+| 서버에서 알 수 없는 에러가 발생함.
+
+| `VALID-001`
+| 요청에 대한 Parameter가 올바르지 않음 (Validation Failure)
+
+| `VALID-002`
+| 비즈니스 로직에서 Validation Failure
+
+| `NOT_FOUND`
+| 요청에 대한 대상이 존재하지 않음.
+|===
+
+[[resources]]
+= 리소스
+
+[[resources-contract]]
+== 계약
+
+Contract 리소스는 Contract 데이터를 생성, 수정, 조회할 때 사용한다.
+
+[[resources-one-contract]]
+=== 계약 조회
+
+`GET` 요청을 사용하여 계약 정보를 조회할 수 있다.
+
+==== Request Example
+
+include::{snippets}/contract/get-contract/http-request.adoc[]
+include::{snippets}/contract/get-contract/path-parameters.adoc[]
+
+==== Response Example
+
+include::{snippets}/contract/get-contract/http-response.adoc[]
+include::{snippets}/contract/get-contract/response-fields.adoc[]
+
+[[resources-contract-save]]
+=== 계약 생성
+
+`POST` 요청을 사용해서 새로운 계약 정보를 생성 할 수 있다.
+
+==== Request Example
+
+include::{snippets}/contract/save-contract/http-request.adoc[]
+include::{snippets}/contract/save-contract/request-fields.adoc[]
+
+==== Response Example
+
+include::{snippets}/contract/save-contract/http-response.adoc[]
+include::{snippets}/contract/save-contract/response-fields.adoc[]
+
+[[resources-contract-update]]
+=== 계약 정보 수정
+
+`PATCH` 요청을 사용해서 계약의 정보를 변경 할 수 있다.
+
+==== Request Example
+
+include::{snippets}/contract/patch-contract/http-request.adoc[]
+include::{snippets}/contract/patch-contract/path-parameters.adoc[]
+include::{snippets}/contract/patch-contract/request-fields.adoc[]
+
+==== Response Example
+
+include::{snippets}/contract/patch-contract/http-response.adoc[]
+include::{snippets}/contract/patch-contract/response-fields.adoc[]
+
+[[resources-expected-total-premium]]
+=== 예상 총 보험료 조회
+
+`GET` 요청을 사용하여 예상 총 보험료를 조회할 수 있다.
+
+==== Request Example
+
+include::{snippets}/contract/get-expected-total-premium/http-request.adoc[]
+
+==== Response Example
+
+include::{snippets}/contract/get-expected-total-premium/http-response.adoc[]
+include::{snippets}/contract/get-expected-total-premium/response-fields.adoc[]
