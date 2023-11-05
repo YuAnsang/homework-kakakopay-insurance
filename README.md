@@ -53,6 +53,12 @@
     - 계약 : Contract
     - 보험료 : Premium
 
+4. 안내장 발송 선택 문제에 대한 내용
+
+- 안내장 발송의 대상을 조회 하는 곳과 실제로 이메일을 발송하는 부분의 연관 관계를 끊기 위해 EventPublisher, EventListener를 적용하였습니다.
+- 실제 환경에서는 EventPublisher, EventListener는 별도 서드파티로 변경도 가능해보입니다.
+- 이메일의 contents의 값을 dynamic하게 변경(replace)등을 해야하는 경우는 EmailEvent의 구조가 달라져야 할수도 있어보입니다.
+
 ## Technologies
 
 - Java 17
