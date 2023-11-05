@@ -44,7 +44,15 @@ dependencies {
     // docs
     asciidoctorExt 'org.springframework.restdocs:spring-restdocs-asciidoctor'
 
+    // querydsl
+    implementation "com.querydsl:querydsl-jpa:${dependencyManagement.importedProperties['querydsl.version']}:jakarta"
+    annotationProcessor "com.querydsl:querydsl-apt:${dependencyManagement.importedProperties['querydsl.version']}:jakarta"
+    annotationProcessor "jakarta.persistence:jakarta.persistence-api" // java.lang.NoClassDefFoundError (javax.annotation.Entity) 발생 대응
+    annotationProcessor "jakarta.annotation:jakarta.annotation-api" // java.lang.NoClassDefFoundError (javax.annotation.Generated) 발생 대응
+
     // test
+    testImplementation "com.querydsl:querydsl-jpa:${dependencyManagement.importedProperties['querydsl.version']}:jakarta"
+    testAnnotationProcessor "com.querydsl:querydsl-apt:${dependencyManagement.importedProperties['querydsl.version']}:jakarta"
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
     testImplementation 'com.tngtech.archunit:archunit:1.0.1'
@@ -85,5 +93,11 @@ bootJar {
     dependsOn asciidoctor
     from("${asciidoctor.outputDir}") {
         into "BOOT-INF/classes/static/docs"
+    }
+}
+
+tasks {
+    processResources {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
 }

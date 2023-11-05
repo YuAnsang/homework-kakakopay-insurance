@@ -48,6 +48,9 @@ public class Contract extends BaseEntity {
   @Column(nullable = false)
   private ContractStatus status;
 
+  @Column(nullable = false)
+  private Boolean isSentExpiresEmail;
+
   @ManyToOne
   @JoinColumn(name = "product_id")
   private Product product;
@@ -55,11 +58,12 @@ public class Contract extends BaseEntity {
   @OneToMany(mappedBy = "contract", orphanRemoval = true, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE})
   private List<ContractCoverage> contractCoverages = new ArrayList<>();
 
-  public Contract(LocalDate startDate, LocalDate endDate, Integer durationInMonths, ContractStatus status) {
+  public Contract(LocalDate startDate, LocalDate endDate, Integer durationInMonths, ContractStatus status, Boolean isSentExpiresEmail) {
     this.startDate = startDate;
     this.endDate = endDate;
     this.durationInMonths = durationInMonths;
     this.status = status;
+    this.isSentExpiresEmail = isSentExpiresEmail;
   }
 
   public void setProduct(Product product) {
@@ -84,6 +88,10 @@ public class Contract extends BaseEntity {
     this.status = request.status();
     this.contractCoverages.clear();
     this.addCoverages(coverages);
+  }
+
+  public void sendEmail() {
+    this.isSentExpiresEmail = true;
   }
 
 }
