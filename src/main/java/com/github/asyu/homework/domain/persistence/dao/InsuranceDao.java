@@ -1,5 +1,7 @@
 package com.github.asyu.homework.domain.persistence.dao;
 
+import static com.github.asyu.homework.domain.persistence.entity.QContract.contract;
+
 import com.github.asyu.homework.common.exception.EntityNotExistsException;
 import com.github.asyu.homework.domain.persistence.entity.Contract;
 import com.github.asyu.homework.domain.persistence.entity.Coverage;
@@ -8,6 +10,8 @@ import com.github.asyu.homework.domain.persistence.repository.ContractCoverageRe
 import com.github.asyu.homework.domain.persistence.repository.ContractRepository;
 import com.github.asyu.homework.domain.persistence.repository.CoverageRepository;
 import com.github.asyu.homework.domain.persistence.repository.ProductRepository;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -17,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @Repository
 public class InsuranceDao {
+
+  private final JPAQueryFactory queryFactory;
 
   private final ContractRepository contractRepository;
 
@@ -44,6 +50,17 @@ public class InsuranceDao {
   public Contract findContractById(Long contractId) {
     return this.contractRepository.findById(contractId)
         .orElseThrow(() -> new EntityNotExistsException("Not exists Contract. id : " + contractId));
+  }
+
+  public List<Contract> findExpiresContractsInSevenDays() {
+    return queryFactory
+        .select(contract)
+        .from(contract)
+        .where(
+            contract.isSentExpiresEmail.eq(false),
+            contract.endDate.loe(LocalDate.now().plusDays(7))
+        )
+        .fetch();
   }
 
 }

@@ -17,7 +17,8 @@ public class ContractMapper {
         startDate,
         startDate.plusMonths(durationInMonths),
         durationInMonths,
-        ContractStatus.NORMAL
+        ContractStatus.NORMAL,
+        false
     );
   }
 
